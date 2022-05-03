@@ -36,29 +36,41 @@ public class StudentServiceImple implements StudentService {
 
 	@Override
 	public int addNewStudent(String stujson) {
+		//1,转换JSON数据，获取相应的value值
 		JSONObject jsonObject = JSON.parseObject(stujson);
 		String name = jsonObject.getString("name");
 		String gradeClassName = jsonObject.getString("gradeClassName");
 		JSONArray clazzName = jsonObject.getJSONArray("clazzName");
 		JSONArray teacherName = jsonObject.getJSONArray("teacherName");
+		//2，新增学生
 		Student student=new Student();
 		student.setName(name);
+		//2.1，通过名字查询该班级是否存在，如果不存在就自己建一个
 		Gradeclass gradeclass=gradeclassReporsitory.findByGradeClassName(gradeClassName);
 		if(gradeclass==null){
 			gradeclass=new Gradeclass();
 			gradeclass.setGradeClassName(gradeClassName);
 		}
 		student.setGradeClass(gradeclass);
+		//2.2，通过名字查询课程是否存在，不存在就自己新建
 		for(Object temp:clazzName){
-			Clazz clazz=new Clazz();
-			clazz.setName((String)temp);
+			Clazz clazz=clazzReporsitory.findByName((String)temp);
+			if(clazz==null) {
+				clazz=new Clazz();
+				clazz.setName((String) temp);
+			}
 			student.getClazzes().add(clazz);
 		}
+		//2.3，查询老师是否存在，不存在就新建一个
 		for(Object temp:teacherName) {
-			Teacher teacher = new Teacher();
-			teacher.setTeacherName((String)temp);
+			Teacher teacher = teacherReprository.findByTeacherName((String)temp);
+			if(teacher==null){
+				teacher=new Teacher();
+				teacher.setTeacherName((String)temp);
+			}
 			student.getTeachers().add(teacher);
 		}
+		//3，保存学生
 		Student save = studentReporsitory.save(student);
 		if(save!=null){
 			return 1;
@@ -71,7 +83,7 @@ public class StudentServiceImple implements StudentService {
 	public Student viewOne(Long id) {
 
 		Optional<Student> byId = studentReporsitory.findById(id);
-
+		//判断是否为空
 		if(byId.isPresent()) {
 			return byId.get();
 		}
@@ -82,7 +94,7 @@ public class StudentServiceImple implements StudentService {
 	@Override
 	public int removeStudent(Long id) {
 
-		//判断id是否存在再删除,否则会报错
+			//判断id是否存在再删除,否则会报错
 			if(studentReporsitory.existsById(id)) {
 				studentReporsitory.deleteById(id);
 				return 1;
@@ -94,34 +106,50 @@ public class StudentServiceImple implements StudentService {
 	@Override
 	@Transactional
 	public int alterStudent(String stujson) {
+		//1,转换JSON数据，获取相应的value值
 		JSONObject jsonObject = JSON.parseObject(stujson);
-		Long stuId = jsonObject.getLong("stuId");
+		Long stuId=jsonObject.getLong("stuId");
 		String name = jsonObject.getString("name");
 		String gradeClassName = jsonObject.getString("gradeClassName");
 		JSONArray clazzName = jsonObject.getJSONArray("clazzName");
 		JSONArray teacherName = jsonObject.getJSONArray("teacherName");
-		Student student=new Student();
-		student.setName(name);
-		student.setStuId(stuId);
-
-		Gradeclass gradeclass=new Gradeclass();
-		gradeclass.setGradeClassName(gradeClassName);
-		student.setGradeClass(gradeclass);
-		for(Object temp:clazzName){
-			Clazz clazz=new Clazz();
-			clazz.setName((String)temp);
-			student.getClazzes().add(clazz);
-		}
-		for(Object temp:teacherName) {
-			Teacher teacher = new Teacher();
-			teacher.setTeacherName((String)temp);
-			student.getTeachers().add(teacher);
-		}
-		 studentReporsitory.deleteById(student.getStuId());
-		 Student changedStudent=new Student(student.getName(),student.getGradeClass(),student.getClazzes(),student.getTeachers());
-		Student save = studentReporsitory.save(changedStudent);
-		if(save==null)
+		//2，搜索学生
+		Optional<Student> byId = studentReporsitory.findById(stuId);
+		if(!byId.isPresent())
 			return 0;
+
+		//lumda表达式
+		byId.ifPresent((student)->{
+			student.setName(name);
+			//2.1，通过名字查询该班级是否存在，如果不存在就自己建一个
+			Gradeclass gradeclass=gradeclassReporsitory.findByGradeClassName(gradeClassName);
+			if(gradeclass==null){
+				gradeclass=new Gradeclass();
+				gradeclass.setGradeClassName(gradeClassName);
+			}
+			student.setGradeClass(gradeclass);
+			//2.2，通过名字查询课程是否存在，不存在就自己新建
+			for(Object temp:clazzName){
+				Clazz clazz=clazzReporsitory.findByName((String)temp);
+				if(clazz==null) {
+					clazz=new Clazz();
+					clazz.setName((String) temp);
+				}
+				student.getClazzes().add(clazz);
+			}
+			//2.3，查询老师是否存在，不存在就新建一个
+			for(Object temp:teacherName) {
+				Teacher teacher = teacherReprository.findByTeacherName((String)temp);
+				if(teacher==null){
+					teacher=new Teacher();
+					teacher.setTeacherName((String)temp);
+				}
+				student.getTeachers().add(teacher);
+			}
+			//3，保存学生
+			Student save = studentReporsitory.save(student);
+
+		});
 		return 1;
 
 
